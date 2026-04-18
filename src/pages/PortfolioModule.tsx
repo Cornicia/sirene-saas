@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { User, Project, Route } from '../App'
 import Sidebar from '../components/Sidebar'
+import ShareModal from '../components/ShareModal'
+import { generateShareLink } from '../lib/share'
 
 type Props = { user: User; projects: Project[]; navigate: (r: Route, p?: Project) => void; addProject: (p: Project) => void; selectedProject: Project | null }
 type Item = { id: string; title: string; type: string; desc: string; link: string }
@@ -17,10 +19,10 @@ const DEFAULT: PF = { name: '', tagline: '', about: '', layout: 'grid', items: [
 export default function PortfolioModule({ user, navigate }: Props) {
   const [step, setStep] = useState(0)
   const [data, setData] = useState<PF>(DEFAULT)
+  const [shareLink, setShareLink] = useState<string | null>(null)
   const fr = user.language === 'fr'
   const set = (f: keyof PF, v: any) => setData(d => ({ ...d, [f]: v }))
   const tmpl = TMPLS.find(t => t.id === data.template) || TMPLS[0]
-
   const updateItem = (i: number, f: keyof Item, v: string) => {
     const items = [...data.items]; items[i] = { ...items[i], [f]: v }; set('items', items)
   }
@@ -81,7 +83,7 @@ export default function PortfolioModule({ user, navigate }: Props) {
                     <div className="field"><label>{fr ? 'Titre' : 'Title'}</label><input value={item.title} onChange={e => updateItem(i, 'title', e.target.value)} /></div>
                     <div className="field"><label>Type</label>
                       <select value={item.type} onChange={e => updateItem(i, 'type', e.target.value)}>
-                        {['web','design','mobile','data','video','autre'].map(t => <option key={t} value={t}>{t}</option>)}
+                        {['web','design','mobile','data','video','autre'].map(t => <option key={t}>{t}</option>)}
                       </select>
                     </div>
                     <div className="field"><label>Lien</label><input value={item.link} onChange={e => updateItem(i, 'link', e.target.value)} placeholder="https://..." /></div>
@@ -92,7 +94,7 @@ export default function PortfolioModule({ user, navigate }: Props) {
               <button className="btn-add" onClick={() => set('items', [...data.items, { id: Date.now().toString(), title: '', type: 'web', desc: '', link: '' }])}>＋ {fr ? 'Ajouter un projet' : 'Add project'}</button>
             </div>
             <div className="form-actions">
-              <button className="btn-outline" onClick={() => setStep(0)}>← {fr ? 'Retour' : 'Back'}</button>
+              <button className="btn-outline" onClick={() => setStep(0)}>←</button>
               <button className="btn-primary" onClick={() => setStep(2)}>{fr ? 'Aperçu →' : 'Preview →'}</button>
             </div>
           </div>
@@ -102,8 +104,8 @@ export default function PortfolioModule({ user, navigate }: Props) {
           <div className="preview-wrap">
             <div className="preview-bar">
               <button className="btn-outline" onClick={() => setStep(1)}>← {fr ? 'Modifier' : 'Edit'}</button>
-              <button className="btn-primary">🔗 {fr ? 'Publier & Partager' : 'Publish & Share'}</button>
-              <button className="btn-outline">⬇ PDF</button>
+              <button className="btn-primary">⬇ PDF</button>
+              <button className="btn-share" onClick={() => setShareLink(generateShareLink('portfolio', data))}>🔗 {fr ? 'Partager' : 'Share'}</button>
             </div>
             <div className="pf-doc">
               <div className="pf-hero" style={{ background: tmpl.color }}>
@@ -111,15 +113,12 @@ export default function PortfolioModule({ user, navigate }: Props) {
                 <p>{data.tagline || 'Votre tagline'}</p>
               </div>
               {data.about && <div className="pf-about"><p>{data.about}</p></div>}
-              <div className={`pf-items ${data.layout}`}>
+              <div className={`pf-items ${data.layout}`} style={{ padding: '24px 40px' }}>
                 {data.items.filter(i => i.title).map((item, idx) => (
                   <div key={idx} className="pf-item">
-                    <div className="pf-thumb" style={{ background: `hsl(${idx * 55 + 180}, 50%, 88%)` }}>
-                      <span>{item.type}</span>
-                    </div>
+                    <div className="pf-thumb" style={{ background: `hsl(${idx * 55 + 180},50%,88%)` }}><span>{item.type}</span></div>
                     <div className="pf-item-info">
-                      <strong>{item.title}</strong>
-                      <p>{item.desc}</p>
+                      <strong>{item.title}</strong><p>{item.desc}</p>
                       {item.link && <a href={item.link} target="_blank" rel="noreferrer">↗ {fr ? 'Voir' : 'View'}</a>}
                     </div>
                   </div>
@@ -129,6 +128,7 @@ export default function PortfolioModule({ user, navigate }: Props) {
           </div>
         )}
       </main>
+      {shareLink && <ShareModal link={shareLink} onClose={() => setShareLink(null)} lang={user.language} />}
     </div>
   )
 }

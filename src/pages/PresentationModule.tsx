@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { User, Project, Route } from '../App'
 import Sidebar from '../components/Sidebar'
+import ShareModal from '../components/ShareModal'
+import { generateShareLink } from '../lib/share'
 
 type Props = { user: User; projects: Project[]; navigate: (r: Route, p?: Project) => void; addProject: (p: Project) => void; selectedProject: Project | null }
 type Slide = { id: string; title: string; content: string; type: 'title' | 'content' | 'split' }
@@ -26,10 +28,10 @@ export default function PresentationModule({ user, navigate }: Props) {
   const [step, setStep] = useState(0)
   const [data, setData] = useState<Pres>(DEFAULT)
   const [active, setActive] = useState(0)
+  const [shareLink, setShareLink] = useState<string | null>(null)
   const fr = user.language === 'fr'
   const set = (f: keyof Pres, v: any) => setData(d => ({ ...d, [f]: v }))
   const tmpl = TMPLS.find(t => t.id === data.template) || TMPLS[0]
-
   const updateSlide = (i: number, f: keyof Slide, v: string) => {
     const slides = [...data.slides]; slides[i] = { ...slides[i], [f]: v }; set('slides', slides)
   }
@@ -79,8 +81,8 @@ export default function PresentationModule({ user, navigate }: Props) {
             <div className="fsec mt16">
               <h4>{fr ? 'Infos générales' : 'General info'}</h4>
               <div className="frow">
-                <div className="field"><label>{fr ? 'Titre' : 'Title'}</label><input value={data.title} onChange={e => set('title', e.target.value)} placeholder={fr ? 'Mon Pitch 2025' : 'My Pitch 2025'} /></div>
-                <div className="field"><label>{fr ? 'Sous-titre' : 'Subtitle'}</label><input value={data.subtitle} onChange={e => set('subtitle', e.target.value)} placeholder="..." /></div>
+                <div className="field"><label>{fr ? 'Titre' : 'Title'}</label><input value={data.title} onChange={e => set('title', e.target.value)} placeholder="Mon Pitch 2025" /></div>
+                <div className="field"><label>{fr ? 'Sous-titre' : 'Subtitle'}</label><input value={data.subtitle} onChange={e => set('subtitle', e.target.value)} /></div>
                 <div className="field"><label>{fr ? 'Auteur' : 'Author'}</label><input value={data.author} onChange={e => set('author', e.target.value)} placeholder={user.name} /></div>
               </div>
             </div>
@@ -101,22 +103,19 @@ export default function PresentationModule({ user, navigate }: Props) {
                 ))}
                 <button className="btn-add mt8" onClick={addSlide}>＋ Slide</button>
               </div>
-
               <div className="slide-edit">
-                <div className="field"><label>{fr ? 'Titre du slide' : 'Slide title'}</label>
-                  <input value={data.slides[active]?.title || ''} onChange={e => updateSlide(active, 'title', e.target.value)} /></div>
+                <div className="field"><label>{fr ? 'Titre' : 'Title'}</label><input value={data.slides[active]?.title || ''} onChange={e => updateSlide(active, 'title', e.target.value)} /></div>
                 <div className="field"><label>Type</label>
                   <select value={data.slides[active]?.type} onChange={e => updateSlide(active, 'type', e.target.value as any)}>
                     <option value="title">{fr ? 'Slide titre' : 'Title slide'}</option>
                     <option value="content">{fr ? 'Contenu' : 'Content'}</option>
-                    <option value="split">{fr ? 'Deux colonnes' : 'Two columns'}</option>
                   </select>
                 </div>
                 <div className="field"><label>{fr ? 'Contenu' : 'Content'}</label>
-                  <textarea rows={5} value={data.slides[active]?.content || ''} onChange={e => updateSlide(active, 'content', e.target.value)} placeholder={fr ? 'Votre contenu...' : 'Your content...'} /></div>
-                {data.slides.length > 1 && <button className="btn-del" onClick={() => deleteSlide(active)}>🗑 {fr ? 'Supprimer ce slide' : 'Delete slide'}</button>}
+                  <textarea rows={5} value={data.slides[active]?.content || ''} onChange={e => updateSlide(active, 'content', e.target.value)} />
+                </div>
+                {data.slides.length > 1 && <button className="btn-del" onClick={() => deleteSlide(active)}>🗑 {fr ? 'Supprimer' : 'Delete'}</button>}
               </div>
-
               <div className="slide-live" style={{ background: tmpl.bg }}>
                 {data.slides[active]?.type === 'title' ? (
                   <div className="sl-title-layout">
@@ -135,8 +134,8 @@ export default function PresentationModule({ user, navigate }: Props) {
               </div>
             </div>
             <div className="form-actions mt16">
-              <button className="btn-outline" onClick={() => setStep(0)}>← {fr ? 'Retour' : 'Back'}</button>
-              <button className="btn-primary" onClick={() => setStep(2)}>{fr ? 'Aperçu complet →' : 'Full preview →'}</button>
+              <button className="btn-outline" onClick={() => setStep(0)}>←</button>
+              <button className="btn-primary" onClick={() => setStep(2)}>{fr ? 'Aperçu →' : 'Preview →'}</button>
             </div>
           </div>
         )}
@@ -146,7 +145,7 @@ export default function PresentationModule({ user, navigate }: Props) {
             <div className="preview-bar">
               <button className="btn-outline" onClick={() => setStep(1)}>← {fr ? 'Modifier' : 'Edit'}</button>
               <button className="btn-primary" onClick={() => window.print()}>⬇ PDF</button>
-              <button className="btn-outline">🔗 {fr ? 'Partager' : 'Share'}</button>
+              <button className="btn-share" onClick={() => setShareLink(generateShareLink('presentation', data))}>🔗 {fr ? 'Partager' : 'Share'}</button>
             </div>
             <div className="slides-full">
               {data.slides.map((sl, i) => (
@@ -171,6 +170,7 @@ export default function PresentationModule({ user, navigate }: Props) {
           </div>
         )}
       </main>
+      {shareLink && <ShareModal link={shareLink} onClose={() => setShareLink(null)} lang={user.language} />}
     </div>
   )
 }

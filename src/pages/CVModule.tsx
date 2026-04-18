@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { User, Project, Route } from '../App'
 import Sidebar from '../components/Sidebar'
+import ShareModal from '../components/ShareModal'
+import { generateShareLink } from '../lib/share'
 
 type Props = { user: User; projects: Project[]; navigate: (r: Route, p?: Project) => void; addProject: (p: Project) => void; selectedProject: Project | null }
 type Exp = { company: string; role: string; period: string; desc: string }
@@ -25,9 +27,15 @@ const DEFAULT: CV = {
 export default function CVModule({ user, navigate }: Props) {
   const [step, setStep] = useState(0)
   const [cv, setCv] = useState<CV>(DEFAULT)
+  const [shareLink, setShareLink] = useState<string | null>(null)
   const fr = user.language === 'fr'
   const tmpl = TEMPLATES.find(t => t.id === cv.template) || TEMPLATES[0]
   const set = (f: keyof CV, v: any) => setCv(c => ({ ...c, [f]: v }))
+
+  const handleShare = () => {
+    const link = generateShareLink('cv', cv)
+    setShareLink(link)
+  }
 
   return (
     <div className="layout">
@@ -78,7 +86,6 @@ export default function CVModule({ user, navigate }: Props) {
               </div>
               <div className="field"><label>{fr ? 'Résumé' : 'Summary'}</label><textarea rows={3} value={cv.summary} onChange={e => set('summary', e.target.value)} placeholder={fr ? 'Présentez-vous en 2-3 phrases...' : '2-3 sentences about you...'} /></div>
             </div>
-
             <div className="fsec">
               <h4>💼 {fr ? 'Expériences' : 'Experience'}</h4>
               {cv.experience.map((exp, i) => (
@@ -93,7 +100,6 @@ export default function CVModule({ user, navigate }: Props) {
               ))}
               <button className="btn-add" onClick={() => set('experience', [...cv.experience, { company: '', role: '', period: '', desc: '' }])}>＋ {fr ? 'Ajouter une expérience' : 'Add experience'}</button>
             </div>
-
             <div className="fsec">
               <h4>🎓 {fr ? 'Formation' : 'Education'}</h4>
               {cv.education.map((edu, i) => (
@@ -105,7 +111,6 @@ export default function CVModule({ user, navigate }: Props) {
               ))}
               <button className="btn-add" onClick={() => set('education', [...cv.education, { school: '', degree: '', year: '' }])}>＋ {fr ? 'Ajouter' : 'Add'}</button>
             </div>
-
             <div className="fsec">
               <h4>⚡ {fr ? 'Compétences' : 'Skills'}</h4>
               <div className="skills-wrap">
@@ -115,7 +120,6 @@ export default function CVModule({ user, navigate }: Props) {
                 <button className="btn-add-sm" onClick={() => set('skills', [...cv.skills, ''])}>＋</button>
               </div>
             </div>
-
             <div className="form-actions">
               <button className="btn-outline" onClick={() => setStep(0)}>← {fr ? 'Retour' : 'Back'}</button>
               <button className="btn-primary" onClick={() => setStep(2)}>{fr ? 'Voir l\'aperçu →' : 'Preview →'}</button>
@@ -128,7 +132,7 @@ export default function CVModule({ user, navigate }: Props) {
             <div className="preview-bar">
               <button className="btn-outline" onClick={() => setStep(1)}>← {fr ? 'Modifier' : 'Edit'}</button>
               <button className="btn-primary" onClick={() => window.print()}>⬇ PDF</button>
-              <button className="btn-outline">🔗 {fr ? 'Partager' : 'Share'}</button>
+              <button className="btn-share" onClick={handleShare}>🔗 {fr ? 'Partager' : 'Share'}</button>
             </div>
             <div className="cv-doc" style={{ borderTop: `6px solid ${tmpl.color}` }}>
               <div className="cv-top">
@@ -140,10 +144,10 @@ export default function CVModule({ user, navigate }: Props) {
                   {cv.city && <span>📍 {cv.city}</span>}
                 </div>
               </div>
-              {cv.summary && <div className="cv-s"><h3 style={{ color: tmpl.color }}>{fr ? 'PROFIL' : 'SUMMARY'}</h3><p>{cv.summary}</p></div>}
+              {cv.summary && <div className="cv-s"><h3 style={{ color: tmpl.color }}>PROFIL</h3><p>{cv.summary}</p></div>}
               {cv.experience.some(e => e.company) && (
                 <div className="cv-s">
-                  <h3 style={{ color: tmpl.color }}>{fr ? 'EXPÉRIENCES' : 'EXPERIENCE'}</h3>
+                  <h3 style={{ color: tmpl.color }}>EXPÉRIENCES</h3>
                   {cv.experience.filter(e => e.company).map((e, i) => (
                     <div key={i} className="cv-entry">
                       <div className="cv-eh"><strong>{e.role}</strong> — {e.company}<span>{e.period}</span></div>
@@ -154,13 +158,13 @@ export default function CVModule({ user, navigate }: Props) {
               )}
               {cv.education.some(e => e.school) && (
                 <div className="cv-s">
-                  <h3 style={{ color: tmpl.color }}>{fr ? 'FORMATION' : 'EDUCATION'}</h3>
+                  <h3 style={{ color: tmpl.color }}>FORMATION</h3>
                   {cv.education.filter(e => e.school).map((e, i) => <div key={i} className="cv-entry"><strong>{e.degree}</strong> · {e.school} <span className="cv-date">{e.year}</span></div>)}
                 </div>
               )}
               {cv.skills.some(s => s) && (
                 <div className="cv-s">
-                  <h3 style={{ color: tmpl.color }}>{fr ? 'COMPÉTENCES' : 'SKILLS'}</h3>
+                  <h3 style={{ color: tmpl.color }}>COMPÉTENCES</h3>
                   <div className="cv-skills">{cv.skills.filter(s => s).map((s, i) => <span key={i} style={{ borderColor: tmpl.color + '40' }}>{s}</span>)}</div>
                 </div>
               )}
@@ -168,6 +172,7 @@ export default function CVModule({ user, navigate }: Props) {
           </div>
         )}
       </main>
+      {shareLink && <ShareModal link={shareLink} onClose={() => setShareLink(null)} lang={user.language} />}
     </div>
   )
 }
